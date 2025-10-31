@@ -32,6 +32,7 @@ import net from "net";
 import os from "os";
 import path from "path";
 import { PNG } from "pngjs";
+import { addTestPlugins } from "../../hub/PluginLoader";
 import { AdvantageScopeAssets } from "../../shared/AdvantageScopeAssets";
 import ButtonRect from "../../shared/ButtonRect";
 import { ensureThemeContrast } from "../../shared/Colors";
@@ -40,7 +41,12 @@ import LineGraphFilter from "../../shared/LineGraphFilter";
 import NamedMessage from "../../shared/NamedMessage";
 import Preferences, { DEFAULT_PREFS, getLiveModeName, LiveMode, mergePreferences } from "../../shared/Preferences";
 import { SourceListConfig, SourceListItemState, SourceListTypeMemory } from "../../shared/SourceListConfig";
-import TabType, { getAllTabTypes, getDefaultTabTitle, getTabAccelerator, getTabIcon } from "../../shared/TabType";
+import TabType, {
+  getAllTabTypesWithPlugins,
+  getDefaultTabTitle,
+  getTabAccelerator,
+  getTabIcon
+} from "../../shared/TabType";
 import { BUILD_DATE, COPYRIGHT, DISTRIBUTION, Distribution } from "../../shared/buildConstants";
 import { Units } from "../../shared/units";
 import { GITHUB_REPOSITORY } from "../github";
@@ -86,6 +92,8 @@ import {
 import { getOwletDownloadStatus, startOwletDownloadLoop } from "./owletDownloadLoop";
 import { checkHootIsPro, convertHoot, CTRE_LICENSE_URL } from "./owletInterface";
 
+addTestPlugins();
+
 // Global variables
 let hubWindows: BrowserWindow[] = []; // Ordered by last focus time (recent first)
 let downloadWindow: BrowserWindow | null = null;
@@ -110,6 +118,8 @@ let advantageScopeAssets: AdvantageScopeAssets = {
   loadFailures: []
 };
 XRServer.assetsSupplier = () => advantageScopeAssets;
+
+console.log("getAllTabTypesWithPlugins: ", JSON.stringify(getAllTabTypesWithPlugins(), null, 2));
 
 // Live RLOG variables
 let rlogSockets: { [id: number]: net.Socket } = {};
@@ -1295,7 +1305,7 @@ setInterval(() => {
 function newTabPopup(window: BrowserWindow, rect: ButtonRect) {
   if (!hubWindows.includes(window)) return;
   const newTabMenu = new Menu();
-  getAllTabTypes()
+  getAllTabTypesWithPlugins()
     .slice(1)
     .forEach((tabType) => {
       newTabMenu.append(
@@ -2179,7 +2189,7 @@ function setupMenu() {
       submenu: [
         {
           label: "New Tab",
-          submenu: getAllTabTypes()
+          submenu: getAllTabTypesWithPlugins()
             .slice(1)
             .map((tabType) => {
               return {
@@ -2463,7 +2473,7 @@ function createHubWindow(state?: WindowState) {
                 new TouchBar.TouchBarScrubber({
                   selectedStyle: "background",
                   continuous: false,
-                  items: getAllTabTypes()
+                  items: getAllTabTypesWithPlugins()
                     .slice(1)
                     .map((type) => {
                       return {

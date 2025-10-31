@@ -18,7 +18,12 @@ enum TabType {
   Swerve,
   Mechanism,
   Points,
-  Metadata
+  Metadata,
+  Plugin0,
+  Plugin1,
+  Plugin2,
+  Plugin3,
+  Plugin4
 }
 
 export default TabType;
@@ -70,6 +75,12 @@ export function getDefaultTabTitle(type: TabType): string {
       return "Points";
     case TabType.Metadata:
       return "Metadata";
+    case TabType.Plugin0:
+    case TabType.Plugin1:
+    case TabType.Plugin2:
+    case TabType.Plugin3:
+    case TabType.Plugin4:
+      return getPluginTitle(type);
     default:
       return "";
   }
@@ -103,6 +114,12 @@ export function getTabIcon(type: TabType): string {
       return "📍";
     case TabType.Metadata:
       return "🔍";
+    case TabType.Plugin0:
+    case TabType.Plugin1:
+    case TabType.Plugin2:
+    case TabType.Plugin3:
+    case TabType.Plugin4:
+      return getPluginIcon(type);
     default:
       return "";
   }
@@ -110,6 +127,16 @@ export function getTabIcon(type: TabType): string {
 
 export function getTabAccelerator(type: TabType): string {
   if (type === TabType.Documentation) return "";
+  // Plugins don't have accelerators
+  if (
+    type === TabType.Plugin0 ||
+    type === TabType.Plugin1 ||
+    type === TabType.Plugin2 ||
+    type === TabType.Plugin3 ||
+    type === TabType.Plugin4
+  ) {
+    return "";
+  }
   return (
     "Alt+" +
     (() => {
@@ -143,4 +170,74 @@ export function getTabAccelerator(type: TabType): string {
       }
     })()
   );
+}
+
+/** Helper function to get plugin title from loaded plugins */
+function getPluginTitle(type: TabType): string {
+  const plugin = getPlugin(type);
+  return plugin ? plugin.title : "";
+}
+
+/** Helper function to get plugin icon from loaded plugins */
+function getPluginIcon(type: TabType): string {
+  const plugin = getPlugin(type);
+  return plugin ? plugin.icon : "🔌";
+}
+
+/** Get plugin by TabType */
+function getPlugin(type: TabType): Plugin | null {
+  const plugins = getLoadedPlugins();
+  console.log("getPlugin:", type, plugins);
+  switch (type) {
+    case TabType.Plugin0:
+      return plugins[0] || null;
+    case TabType.Plugin1:
+      return plugins[1] || null;
+    case TabType.Plugin2:
+      return plugins[2] || null;
+    case TabType.Plugin3:
+      return plugins[3] || null;
+    case TabType.Plugin4:
+      return plugins[4] || null;
+    default:
+      return null;
+  }
+}
+
+/** Plugin interface */
+export interface Plugin {
+  title: string;
+  icon: string;
+  controller: new (root: HTMLElement) => any;
+  renderer: new (root: HTMLElement) => any;
+}
+
+/** Get all loaded plugins (to be populated by plugin loader) */
+let loadedPlugins: (Plugin | null)[] = [null, null, null, null, null];
+
+export function getLoadedPlugins(): (Plugin | null)[] {
+  return loadedPlugins;
+}
+
+export function setLoadedPlugins(plugins: (Plugin | null)[]) {
+  loadedPlugins = plugins;
+  console.log("setLoadedPlugins:", plugins);
+}
+
+/** Check if a plugin is defined for a given TabType */
+export function isPluginDefined(type: TabType): boolean {
+  return getPlugin(type) !== null;
+}
+
+/** Get all tab types with undefined plugins filtered out */
+export function getAllTabTypesWithPlugins(): TabType[] {
+  return getAllTabTypes().filter((type) => {
+    console.log("getAllTabTypesWithPlugins:", type, isPluginDefined(type));
+    // If it's a plugin type, check if it's defined
+    if (type >= TabType.Plugin0 && type <= TabType.Plugin4) {
+      return isPluginDefined(type);
+    }
+    // Non-plugin types are always included
+    return true;
+  });
 }

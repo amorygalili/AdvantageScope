@@ -25,6 +25,7 @@ import TableRenderer from "../shared/renderers/TableRenderer";
 import VideoRenderer from "../shared/renderers/VideoRenderer";
 import { Units } from "../shared/units";
 import { clampValue } from "../shared/util";
+import { getPluginController, getPluginRenderer } from "./PluginLoader";
 import ScrollSensor from "./ScrollSensor";
 import Timeline from "./Timeline";
 import ConsoleController from "./controllers/ConsoleController";
@@ -96,6 +97,11 @@ export default class Tabs {
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Mechanism, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Points, undefined);
     this.FIXED_CONTROL_HEIGHTS.set(TabType.Metadata, 0);
+    this.FIXED_CONTROL_HEIGHTS.set(TabType.Plugin0, undefined);
+    this.FIXED_CONTROL_HEIGHTS.set(TabType.Plugin1, undefined);
+    this.FIXED_CONTROL_HEIGHTS.set(TabType.Plugin2, undefined);
+    this.FIXED_CONTROL_HEIGHTS.set(TabType.Plugin3, undefined);
+    this.FIXED_CONTROL_HEIGHTS.set(TabType.Plugin4, undefined);
 
     // Hover and click handling
     let mouseDownInfo: [number, number] | null = null;
@@ -535,6 +541,16 @@ export default class Tabs {
       case TabType.Metadata:
         controller = new MetadataController();
         renderer = new MetadataRenderer(rendererElement);
+        break;
+      case TabType.Plugin0:
+      case TabType.Plugin1:
+      case TabType.Plugin2:
+      case TabType.Plugin3:
+      case TabType.Plugin4:
+        const PluginController = getPluginController(type);
+        const PluginRenderer = getPluginRenderer(type);
+        controller = new PluginController(controlsElement);
+        renderer = new PluginRenderer(rendererElement);
         break;
       default:
         controller = new NoopController();
