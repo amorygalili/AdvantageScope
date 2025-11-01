@@ -32,7 +32,6 @@ import net from "net";
 import os from "os";
 import path from "path";
 import { PNG } from "pngjs";
-import { addTestPlugins } from "../../hub/PluginLoader";
 import { AdvantageScopeAssets } from "../../shared/AdvantageScopeAssets";
 import ButtonRect from "../../shared/ButtonRect";
 import { ensureThemeContrast } from "../../shared/Colors";
@@ -45,7 +44,8 @@ import TabType, {
   getAllTabTypesWithPlugins,
   getDefaultTabTitle,
   getTabAccelerator,
-  getTabIcon
+  getTabIcon,
+  setLoadedPlugins
 } from "../../shared/TabType";
 import { BUILD_DATE, COPYRIGHT, DISTRIBUTION, Distribution } from "../../shared/buildConstants";
 import { Units } from "../../shared/units";
@@ -72,6 +72,7 @@ import {
   TYPE_MEMORY_FILENAME,
   WINDOW_ICON
 } from "./ElectronConstants";
+import { PluginServer } from "./PluginServer";
 import StateTracker, { ApplicationState, SatelliteWindowState, WindowState } from "./StateTracker";
 import UpdateChecker from "./UpdateChecker";
 import { VideoProcessor } from "./VideoProcessor";
@@ -92,7 +93,48 @@ import {
 import { getOwletDownloadStatus, startOwletDownloadLoop } from "./owletDownloadLoop";
 import { checkHootIsPro, convertHoot, CTRE_LICENSE_URL } from "./owletInterface";
 
-addTestPlugins();
+/**
+ * Load plugin metadata synchronously from the file system
+ * This is used in the main process to populate menus before the renderer loads
+ */
+function loadPluginMetadata(pluginDirectories: string[]): void {
+  const pluginMetadata: (any | null)[] = [null, null, null, null, null];
+
+  for (let i = 0; i < Math.min(pluginDirectories.length, 5); i++) {
+    try {
+      const pluginIndexPath = path.join(pluginDirectories[i], "index.js");
+      if (fs.existsSync(pluginIndexPath)) {
+        // Read the plugin file as text
+        const pluginCode = fs.readFileSync(pluginIndexPath, "utf-8");
+
+        // Extract title and icon using regex (simple approach for metadata only)
+        // This is a simplified parser that looks for the plugin object structure
+        const titleMatch = pluginCode.match(/title:\s*["']([^"']+)["']/);
+        const iconMatch = pluginCode.match(/icon:\s*["']([^"']+)["']/);
+
+        if (titleMatch && iconMatch) {
+          pluginMetadata[i] = {
+            title: titleMatch[1],
+            icon: iconMatch[1],
+            controller: null, // Not needed in main process
+            renderer: null // Not needed in main process
+          };
+          console.log(`Loaded plugin metadata ${i}: ${titleMatch[1]}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to load plugin metadata ${i}:`, error);
+      pluginMetadata[i] = null;
+    }
+  }
+
+  // Set the loaded plugins metadata for menu creation
+  setLoadedPlugins(pluginMetadata);
+  console.log(
+    "Plugin metadata loaded:",
+    pluginMetadata.map((p) => (p ? p.title : "null"))
+  );
+}
 
 // Global variables
 let hubWindows: BrowserWindow[] = []; // Ordered by last focus time (recent first)
@@ -3344,6 +3386,15 @@ app.whenReady().then(() => {
 
   // Start owlet download
   startOwletDownloadLoop();
+
+  // Start plugin server and load plugin metadata
+  // For testing, use the built test plugin from example-plugins
+  const testPluginPath = "D:\\repos\\AdvantageScope\\example-plugins\\test-plugin\\dist";
+  PluginServer.setPluginDirectories([testPluginPath]);
+  PluginServer.start();
+
+  // Load plugin metadata for menu creation (synchronous, main process)
+  loadPluginMetadata([testPluginPath]);
 
   // Create menu and windows
   setupMenu();

@@ -5,10 +5,11 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-import { Plugin } from "../../shared/TabType";
+import { Plugin } from "@advantagescope/plugin-api";
 import TestController from "./TestController";
 import TestRenderer from "./TestRenderer";
 
+// Plugin definition
 const testPlugin: Plugin = {
   title: "Test Plugin",
   icon: "🧪",

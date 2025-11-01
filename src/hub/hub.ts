@@ -14,8 +14,9 @@ import Selection from "../shared/Selection";
 import { SourceListItemState, SourceListTypeMemory } from "../shared/SourceListConfig";
 import { DISTRIBUTION, Distribution } from "../shared/buildConstants";
 import Log from "../shared/log/Log";
-import { AKIT_TIMESTAMP_KEYS, getEnabledData, MERGE_PREFIX } from "../shared/log/LogUtil";
-import { calcMockProgress, clampValue, htmlEncode, scaleValue } from "../shared/util";
+import { AKIT_TIMESTAMP_KEYS, getEnabledData, getOrDefault, MERGE_PREFIX } from "../shared/log/LogUtil";
+import { calcMockProgress, clampValue, createUUID, htmlEncode, scaleValue } from "../shared/util";
+import { addTestPlugins } from "./PluginLoader";
 import SelectionImpl from "./SelectionImpl";
 import Sidebar from "./Sidebar";
 import SourceList from "./SourceList";
@@ -91,6 +92,17 @@ window.sidebar = new Sidebar(() =>
 window.tabs = new Tabs();
 window.tuner = null;
 window.messagePort = null;
+
+// Expose AdvantageScope API for plugins
+// These functions are accessed through the plugin-api package
+// They reference the existing window variables to avoid duplication
+(window as any).getOrDefault = getOrDefault;
+(window as any).createUUID = createUUID;
+
+// Initialize plugins asynchronously
+addTestPlugins().catch((error) => {
+  console.error("Failed to initialize plugins:", error);
+});
 
 let historicalSources: {
   source: HistoricalDataSource;

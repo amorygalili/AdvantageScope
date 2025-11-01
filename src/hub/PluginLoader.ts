@@ -9,22 +9,61 @@ import TabRenderer, { NoopRenderer } from "../shared/renderers/TabRenderer";
 import TabType, { Plugin, setLoadedPlugins } from "../shared/TabType";
 import TabController, { NoopController } from "./controllers/TabController";
 
-// Import plugins here
-// For now, we'll import the test plugin for Plugin0
-import testPlugin from "../plugins/testPlugin/index";
-
 // Array of loaded plugins (null if not defined)
-const plugins: (Plugin | null)[] = [
-  testPlugin, // Plugin0
-  null, // Plugin1
-  null, // Plugin2
-  null, // Plugin3
-  null // Plugin4
-];
+const plugins: (Plugin | null)[] = [null, null, null, null, null];
 
-// Initialize plugins in TabType module
-export function addTestPlugins() {
+// Plugin server port (must match ElectronConstants.ts)
+const PLUGIN_SERVER_PORT = 56329;
+
+/**
+ * Load plugins dynamically from the plugin server
+ * This function should be called during application initialization
+ */
+export async function loadPlugins(pluginDirectories: string[]): Promise<void> {
+  console.log("Loading plugins from directories:", pluginDirectories);
+
+  for (let i = 0; i < Math.min(pluginDirectories.length, 5); i++) {
+    try {
+      // Construct the URL to the plugin's index.ts file
+      const pluginUrl = `http://localhost:${PLUGIN_SERVER_PORT}/plugin/${i}/index.js`;
+      console.log(`Loading plugin ${i} from ${pluginUrl}`);
+
+      // Dynamically import the plugin module
+      const module = await import(pluginUrl);
+      const plugin = module.default as Plugin;
+
+      if (plugin && plugin.title && plugin.icon && plugin.controller && plugin.renderer) {
+        plugins[i] = plugin;
+        console.log(`Successfully loaded plugin ${i}: ${plugin.title}`);
+      } else {
+        console.error(`Plugin ${i} has invalid structure:`, plugin);
+      }
+    } catch (error) {
+      console.error(`Failed to load plugin ${i}:`, error);
+      plugins[i] = null;
+    }
+  }
+
+  // Update the loaded plugins in TabType module
   setLoadedPlugins(plugins);
+  console.log(
+    "Plugins loaded:",
+    plugins.map((p) => (p ? p.title : "null"))
+  );
+}
+
+/**
+ * Initialize plugins with hardcoded test plugin for development
+ * This is a temporary function for testing purposes
+ */
+export async function addTestPlugins(): Promise<void> {
+  // For now, hardcode the test plugin directory
+  // In the future, this will be provided by user preferences
+  const testPluginDir = "D:\\repos\\AdvantageScope\\example-plugins\\test-plugin\\dist";
+  console.log("Test plugin directory:", testPluginDir);
+
+  // Use the loadPlugins function to load from the plugin server
+  await loadPlugins([testPluginDir]);
 }
 
 /**

@@ -5,10 +5,13 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-import TabController from "../../hub/controllers/TabController";
-import { getOrDefault } from "../../shared/log/LogUtil";
-import LoggableType from "../../shared/log/LoggableType";
-import { createUUID } from "../../shared/util";
+import {
+  TabController,
+  getSelection,
+  getOrDefault,
+  LoggableType,
+  createUUID
+} from "@advantagescope/plugin-api";
 
 export default class TestController implements TabController {
   UUID = createUUID();
@@ -59,7 +62,7 @@ export default class TestController implements TabController {
   }
 
   getCommand(): TestCommand {
-    const time = window.selection.getRenderTime();
+    const time = getSelection().getRenderTime();
     if (time === null) {
       return { value: null, field: this.FIELD_INPUT.value };
     }
@@ -70,7 +73,7 @@ export default class TestController implements TabController {
     }
 
     // Try to get the value as a number
-    const value = getOrDefault(window.log, field, LoggableType.Number, time, null, this.UUID);
+    const value = getOrDefault(field, LoggableType.Number, time, null, this.UUID);
 
     return {
       value: value,
@@ -83,3 +86,4 @@ export type TestCommand = {
   value: number | null;
   field: string;
 };
+

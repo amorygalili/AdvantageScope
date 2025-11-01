@@ -40,6 +40,9 @@ export const XR_URL_PREFIX =
   "&a=";
 export const XR_SERVER_PORT = 56328;
 
+// Plugin Server
+export const PLUGIN_SERVER_PORT = 56329;
+
 // Live RLOG
 export const RLOG_CONNECT_TIMEOUT_MS = 3000; // How long to wait when connecting
 export const RLOG_DATA_TIMEOUT_MS = 3000; // How long with no data until timeout

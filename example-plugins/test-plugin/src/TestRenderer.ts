@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-import TabRenderer from "../../shared/renderers/TabRenderer";
+import { TabRenderer } from "@advantagescope/plugin-api";
 import { TestCommand } from "./TestController";
 
 export default class TestRenderer implements TabRenderer {
@@ -55,3 +55,4 @@ export default class TestRenderer implements TabRenderer {
     }
   }
 }
+

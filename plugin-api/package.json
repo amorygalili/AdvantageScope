@@ -1,0 +1,26 @@
+{
+  "name": "@advantagescope/plugin-api",
+  "version": "1.0.0",
+  "description": "API for AdvantageScope plugins",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "advantagescope",
+    "plugin",
+    "api"
+  ],
+  "author": {
+    "name": "Littleton Robotics",
+    "email": "software@littletonrobotics.org",
+    "url": "https://littletonrobotics.org"
+  },
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
+
