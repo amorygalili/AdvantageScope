@@ -402,3 +402,5 @@ export const NeonColors: SourceListOptionValueConfig[] = [
   { key: "#ffff00", display: "Yellow" },
   { key: "#ff00ff", display: "Magenta" }
 ];
+
+export type ButtonRect = { x: number; y: number; width: number; height: number };

@@ -15,10 +15,10 @@ export default class TestRenderer implements TabRenderer {
   constructor(root: HTMLElement) {
     this.CONTAINER = root;
 
-    // Create display element
+    // Create display element with a table for showing all sources
     this.CONTAINER.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: center; height: 100%; font-size: 48px; font-weight: bold;">
-        <div class="test-display">No data</div>
+      <div style="padding: 20px; height: 100%; overflow-y: auto;">
+        <div class="test-display"></div>
       </div>
     `;
 
@@ -40,19 +40,73 @@ export default class TestRenderer implements TabRenderer {
   render(command: unknown): void {
     const cmd = command as TestCommand;
 
-    if (!cmd || !cmd.field) {
-      this.DISPLAY.textContent = "No field selected";
-      this.DISPLAY.style.color = "#888";
+    if (!cmd || cmd.sources.length === 0) {
+      this.DISPLAY.innerHTML = `
+        <div style="text-align: center; color: #888; font-size: 18px; margin-top: 50px;">
+          No sources selected. Drag fields from the sidebar to add them.
+        </div>
+      `;
       return;
     }
 
-    if (cmd.value === null) {
-      this.DISPLAY.textContent = "No data";
-      this.DISPLAY.style.color = "#888";
-    } else {
-      this.DISPLAY.textContent = cmd.value.toFixed(3);
-      this.DISPLAY.style.color = "var(--text-color)";
+    // Create a table to display all sources and their values
+    let tableHTML = `
+      <table style="width: 100%; border-collapse: collapse; font-family: monospace;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--divider-color);">
+            <th style="text-align: left; padding: 10px; color: var(--text-color);">Field</th>
+            <th style="text-align: left; padding: 10px; color: var(--text-color);">Type</th>
+            <th style="text-align: left; padding: 10px; color: var(--text-color);">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    cmd.sources.forEach((source) => {
+      let displayValue = "null";
+      let valueColor = "#888";
+
+      if (source.value !== null && source.value !== undefined) {
+        valueColor = "var(--text-color)";
+
+        if (source.type === "number") {
+          displayValue = typeof source.value === "number" ? source.value.toFixed(3) : String(source.value);
+        } else if (source.type === "boolean") {
+          displayValue = source.value ? "true" : "false";
+          valueColor = source.value ? "#42f554" : "#f54242";
+        } else {
+          displayValue = String(source.value);
+        }
+      }
+
+      tableHTML += `
+        <tr style="border-bottom: 1px solid var(--divider-color);">
+          <td style="padding: 10px; color: var(--text-color); font-weight: bold;">${this.escapeHtml(source.logKey)}</td>
+          <td style="padding: 10px; color: #888;">${source.type}</td>
+          <td style="padding: 10px; color: ${valueColor};">${this.escapeHtml(displayValue)}</td>
+        </tr>
+      `;
+    });
+
+    tableHTML += `
+        </tbody>
+      </table>
+    `;
+
+    if (cmd.time !== null) {
+      tableHTML += `
+        <div style="margin-top: 20px; color: #888; font-size: 14px;">
+          Time: ${cmd.time.toFixed(3)}s
+        </div>
+      `;
     }
+
+    this.DISPLAY.innerHTML = tableHTML;
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
   }
 }
-

@@ -17,7 +17,29 @@
 export * from "./types";
 
 // Import types
-import type { AdvantageScopeAssets, Log, LoggableType, Preferences, Selection } from "./types";
+import type {
+  AdvantageScopeAssets,
+  ButtonRect,
+  Log,
+  LoggableType,
+  Preferences,
+  Selection,
+  SourceListConfig,
+  SourceListState
+} from "./types";
+
+/**
+ * SourceList interface for plugins
+ */
+export interface SourceList {
+  setTitle(title: string): void;
+  getState(onlyDisplayedFields?: boolean): SourceListState;
+  setState(state: SourceListState): void;
+  getActiveFields(): string[];
+  stop(): void;
+  clear(): void;
+  refresh(): void;
+}
 
 /**
  * Get the global log object
@@ -95,4 +117,25 @@ export function createUUID(): string {
     throw new Error("AdvantageScope createUUID API not available");
   }
   return createUUIDFn();
+}
+
+/**
+ * Create a SourceList instance
+ * @param root The HTML element to attach the source list to
+ * @param config The configuration for the source list
+ * @param supplementalStateSuppliers Optional suppliers of additional states from other source lists
+ * @returns A SourceList instance
+ */
+export function createSourceList(
+  root: HTMLElement,
+  config: SourceListConfig,
+  supplementalStateSuppliers: (() => SourceListState)[],
+  editButtonCallback?: (rect: ButtonRect) => void,
+  getNumberPreview?: (key: string, time: number) => string | null
+): SourceList {
+  const SourceListClass = (window as any).SourceList;
+  if (!SourceListClass) {
+    throw new Error("AdvantageScope SourceList API not available");
+  }
+  return new SourceListClass(root, config, supplementalStateSuppliers, editButtonCallback, getNumberPreview);
 }

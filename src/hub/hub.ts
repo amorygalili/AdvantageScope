@@ -98,6 +98,7 @@ window.messagePort = null;
 // They reference the existing window variables to avoid duplication
 (window as any).getOrDefault = getOrDefault;
 (window as any).createUUID = createUUID;
+(window as any).SourceList = SourceList;
 
 // Plugin loading state
 let pluginsLoaded = false;

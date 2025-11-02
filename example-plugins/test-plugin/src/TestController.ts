@@ -6,46 +6,105 @@
 // at the root directory of this project.
 
 import {
-  TabController,
-  getSelection,
+  createSourceList,
+  createUUID,
   getOrDefault,
+  getSelection,
   LoggableType,
-  createUUID
+  SourceList,
+  SourceListConfig,
+  SourceListState,
+  TabController
 } from "@advantagescope/plugin-api";
+
+// Simple configuration for the test plugin source list
+const TestPluginConfig: SourceListConfig = {
+  title: "Test Sources",
+  autoAdvance: false,
+  allowChildrenFromDrag: false,
+  types: [
+    {
+      key: "number",
+      display: "Number",
+      symbol: "number",
+      showInTypeName: false,
+      color: "#4287f5",
+      sourceTypes: ["Number"],
+      showDocs: true,
+      options: []
+    },
+    {
+      key: "string",
+      display: "String",
+      symbol: "textformat",
+      showInTypeName: false,
+      color: "#42f554",
+      sourceTypes: ["String"],
+      showDocs: true,
+      options: []
+    },
+    {
+      key: "boolean",
+      display: "Boolean",
+      symbol: "checkmark.circle.fill",
+      showInTypeName: false,
+      color: "#f5a442",
+      sourceTypes: ["Boolean"],
+      showDocs: true,
+      options: []
+    }
+  ]
+};
 
 export default class TestController implements TabController {
   UUID = createUUID();
   private ROOT: HTMLElement;
-  private FIELD_INPUT: HTMLInputElement;
+  private sourceList: SourceList;
 
   constructor(root: HTMLElement) {
     this.ROOT = root;
 
-    // Create a simple input field for selecting a log field
-    this.ROOT.innerHTML = `
-      <div style="padding: 10px;">
-        <label>Field Name: </label>
-        <input type="text" placeholder="/MyRobot/Field" style="width: 300px;" />
-      </div>
-    `;
+    // Create a container for the source list
+    const sourceListContainer = document.createElement("div");
+    sourceListContainer.style.width = "100%";
+    sourceListContainer.style.height = "100%";
+    sourceListContainer.style.boxSizing = "border-box";
+    sourceListContainer.style.overflow = "hidden";
 
-    this.FIELD_INPUT = this.ROOT.querySelector("input")!;
+    this.ROOT.appendChild(sourceListContainer);
+
+    // Create the source list
+    this.sourceList = createSourceList(sourceListContainer, TestPluginConfig, []);
+
+    // Apply custom styles to source list elements
+    const clearButton = sourceListContainer.querySelector(".clear") as HTMLElement;
+    if (clearButton) {
+      clearButton.style.right = "25px";
+    }
+
+    const helpButton = sourceListContainer.querySelector(".help") as HTMLElement;
+    if (helpButton) {
+      helpButton.style.right = "50px";
+    }
+
+    const listElement = sourceListContainer.querySelector(".list") as HTMLElement;
+    if (listElement) {
+      listElement.style.bottom = "10px";
+    }
   }
 
   saveState(): unknown {
-    return {
-      field: this.FIELD_INPUT.value
-    };
+    return this.sourceList.getState();
   }
 
   restoreState(state: unknown): void {
-    if (state && typeof state === "object" && "field" in state) {
-      this.FIELD_INPUT.value = state.field as string;
+    if (state) {
+      this.sourceList.setState(state as SourceListState);
     }
   }
 
   refresh(): void {
-    // Called when log data changes
+    this.sourceList.refresh();
   }
 
   newAssets(): void {
@@ -53,8 +112,7 @@ export default class TestController implements TabController {
   }
 
   getActiveFields(): string[] {
-    const field = this.FIELD_INPUT.value.trim();
-    return field ? [field] : [];
+    return this.sourceList.getActiveFields();
   }
 
   showTimeline(): boolean {
@@ -64,26 +122,47 @@ export default class TestController implements TabController {
   getCommand(): TestCommand {
     const time = getSelection().getRenderTime();
     if (time === null) {
-      return { value: null, field: this.FIELD_INPUT.value };
+      return { sources: [], time: null };
     }
 
-    const field = this.FIELD_INPUT.value.trim();
-    if (!field) {
-      return { value: null, field: "" };
-    }
+    const state = this.sourceList.getState(true); // Only get displayed fields
+    const sources: SourceData[] = state.map((item) => {
+      let value: any = null;
 
-    // Try to get the value as a number
-    const value = getOrDefault(field, LoggableType.Number, time, null, this.UUID);
+      // Get the value based on the type
+      switch (item.type) {
+        case "number":
+          value = getOrDefault(item.logKey, LoggableType.Number, time, null, this.UUID);
+          break;
+        case "string":
+          value = getOrDefault(item.logKey, LoggableType.String, time, null, this.UUID);
+          break;
+        case "boolean":
+          value = getOrDefault(item.logKey, LoggableType.Boolean, time, null, this.UUID);
+          break;
+      }
+
+      return {
+        logKey: item.logKey,
+        type: item.type,
+        value: value
+      };
+    });
 
     return {
-      value: value,
-      field: field
+      sources: sources,
+      time: time
     };
   }
 }
 
-export type TestCommand = {
-  value: number | null;
-  field: string;
+export type SourceData = {
+  logKey: string;
+  type: string;
+  value: any;
 };
 
+export type TestCommand = {
+  sources: SourceData[];
+  time: number | null;
+};
