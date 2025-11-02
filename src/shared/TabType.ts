@@ -187,7 +187,6 @@ function getPluginIcon(type: TabType): string {
 /** Get plugin by TabType */
 function getPlugin(type: TabType): Plugin | null {
   const plugins = getLoadedPlugins();
-  console.log("getPlugin:", type, plugins);
   switch (type) {
     case TabType.Plugin0:
       return plugins[0] || null;
@@ -232,7 +231,6 @@ export function isPluginDefined(type: TabType): boolean {
 /** Get all tab types with undefined plugins filtered out */
 export function getAllTabTypesWithPlugins(): TabType[] {
   return getAllTabTypes().filter((type) => {
-    console.log("getAllTabTypesWithPlugins:", type, isPluginDefined(type));
     // If it's a plugin type, check if it's defined
     if (type >= TabType.Plugin0 && type <= TabType.Plugin4) {
       return isPluginDefined(type);

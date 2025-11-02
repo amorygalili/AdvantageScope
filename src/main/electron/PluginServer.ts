@@ -88,7 +88,7 @@ export namespace PluginServer {
             try {
               const fileContent = fs.readFileSync(resolvedPath);
               const contentType = getContentType(filePath);
-              response.writeHead(200, { 
+              response.writeHead(200, {
                 "Content-Type": contentType,
                 "Access-Control-Allow-Origin": "*"
               });
@@ -105,10 +105,12 @@ export namespace PluginServer {
           // Handle health check
           if (url.pathname === "/health") {
             response.writeHead(200, { "Content-Type": "application/json" });
-            response.end(JSON.stringify({ 
-              status: "ok", 
-              pluginCount: pluginDirectories.length 
-            }));
+            response.end(
+              JSON.stringify({
+                status: "ok",
+                pluginCount: pluginDirectories.length
+              })
+            );
             return;
           }
 
@@ -118,7 +120,20 @@ export namespace PluginServer {
       })
       .listen(PLUGIN_SERVER_PORT);
 
-    console.log(`Plugin server started on port ${PLUGIN_SERVER_PORT}`);
+    httpServer.on("listening", () => {
+      console.log(`Plugin server started on port ${PLUGIN_SERVER_PORT}`);
+    });
+
+    httpServer.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EADDRINUSE") {
+        console.error(`Port ${PLUGIN_SERVER_PORT} is already in use. Plugin server could not start.`);
+        console.error("This usually means another instance of AdvantageScope is running.");
+        console.error("Please close all instances and try again.");
+        httpServer = null;
+      } else {
+        console.error("Plugin server error:", error);
+      }
+    });
   }
 
   /**
@@ -157,4 +172,3 @@ export namespace PluginServer {
     return contentTypes[ext] || "application/octet-stream";
   }
 }
-

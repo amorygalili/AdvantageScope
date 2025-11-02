@@ -16,7 +16,7 @@ import { DISTRIBUTION, Distribution } from "../shared/buildConstants";
 import Log from "../shared/log/Log";
 import { AKIT_TIMESTAMP_KEYS, getEnabledData, getOrDefault, MERGE_PREFIX } from "../shared/log/LogUtil";
 import { calcMockProgress, clampValue, createUUID, htmlEncode, scaleValue } from "../shared/util";
-import { addTestPlugins } from "./PluginLoader";
+import { loadPlugins } from "./PluginLoader";
 import SelectionImpl from "./SelectionImpl";
 import Sidebar from "./Sidebar";
 import SourceList from "./SourceList";
@@ -99,10 +99,10 @@ window.messagePort = null;
 (window as any).getOrDefault = getOrDefault;
 (window as any).createUUID = createUUID;
 
-// Initialize plugins asynchronously
-addTestPlugins().catch((error) => {
-  console.error("Failed to initialize plugins:", error);
-});
+// Plugin loading state
+let pluginsLoaded = false;
+let pluginLoadPromise: Promise<void> | null = null;
+let pendingStateRestore: any = null;
 
 let historicalSources: {
   source: HistoricalDataSource;
@@ -577,7 +577,41 @@ async function handleMainMessage(message: NamedMessage) {
       break;
 
     case "restore-state":
-      restoreState(message.data);
+      // If plugins are still loading, queue the state restoration
+      if (pluginLoadPromise !== null && !pluginsLoaded) {
+        pendingStateRestore = message.data;
+        pluginLoadPromise.then(() => {
+          if (pendingStateRestore !== null) {
+            restoreState(pendingStateRestore);
+            pendingStateRestore = null;
+          }
+        });
+      } else {
+        restoreState(message.data);
+      }
+      break;
+
+    case "load-plugins":
+      // Load plugins from the provided directories
+      pluginLoadPromise = loadPlugins(message.data)
+        .then(() => {
+          pluginsLoaded = true;
+          console.log("Plugins loaded successfully");
+          // If there's a pending state restore, execute it now
+          if (pendingStateRestore !== null) {
+            restoreState(pendingStateRestore);
+            pendingStateRestore = null;
+          }
+        })
+        .catch((error: unknown) => {
+          console.error("Failed to load plugins:", error);
+          pluginsLoaded = true; // Mark as loaded even on error to prevent hanging
+          // Still restore state even if plugins failed to load
+          if (pendingStateRestore !== null) {
+            restoreState(pendingStateRestore);
+            pendingStateRestore = null;
+          }
+        });
       break;
 
     case "restore-type-memory":

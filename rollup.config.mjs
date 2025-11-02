@@ -140,6 +140,7 @@ const smallRendererBundles = [
   bundle("sourceListHelp.ts", "sourceListHelp.js", false, false),
   bundle("betaWelcome.ts", "betaWelcome.js", false, false),
   bundle("preferences.ts", "preferences.js", false, false),
+  bundle("pluginDialog.ts", "pluginDialog.js", false, false),
   bundle("licenses.ts", "licenses.js", false, false),
   bundle("download.ts", "download.js", false, false),
   ...(isLite

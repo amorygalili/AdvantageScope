@@ -49,3 +49,14 @@ For example /plugin/0/index.ts would serve the index.ts file from the first plug
 - Plugins should be loaded as ES modules using dynamic imports.
 
 - Since plugins are not bundled with the rest of the application there needs to be an API for plugins to access AdvantageScope functionality. Functionality will be provided through the global scope/window object. An npm package called plugin-api should be created which provides wrapper functions around the API and can be imported by plugins. These wrapper functions just call the underlying functions assigned to the window object.
+
+## Plugin Dialog
+
+Create a dialog to manage plugins. The dialog should allow the user to:
+
+- Add a plugin using a folder dialog
+- Remove a plugin directory
+- Show plugin name and directory for each plugin added
+- When a plugin is added or removed the user should be prompted to restart AdvantageScope for the changes to take effect.
+- List of plugin directories should be stored and loaded from a json file in userData. A variable for the file path should be stored in src\main\electron\ElectronConstants.ts
+- The list of plugins loaded should be from this json file instead of hardcoded like

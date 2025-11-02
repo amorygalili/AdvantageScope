@@ -115,3 +115,171 @@ div.help-div > a {
   top: 50%;
   transform: translate(-50%, -50%);
 }
+
+/* Plugin Dialog Styles */
+.plugin-dialog-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+.plugin-dialog-header {
+  margin-bottom: 15px;
+}
+
+.plugin-dialog-header h2 {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.plugin-dialog-subtitle {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.plugin-list-container {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .plugin-list-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.plugin-list {
+  padding: 8px;
+}
+
+.plugin-list-empty {
+  text-align: center;
+  padding: 40px 20px;
+  opacity: 0.6;
+  font-size: 13px;
+}
+
+.plugin-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background-color: #fff;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 4px;
+  gap: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .plugin-item {
+    background-color: #333;
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.plugin-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.plugin-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.plugin-directory {
+  font-size: 11px;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plugin-remove-button {
+  position: relative;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  font-size: 22px;
+  line-height: 1;
+  background-color: transparent;
+  color: #ff4444;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.plugin-remove-button:hover {
+  background-color: rgba(255, 68, 68, 0.1);
+  color: #ff0000;
+}
+
+.plugin-remove-button:active {
+  background-color: rgba(255, 68, 68, 0.2);
+}
+
+.plugin-dialog-bottom-buttons {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.plugin-dialog-bottom-buttons > * {
+  margin-left: 8px;
+}
+
+.plugin-dialog-bottom-buttons > *:first-child {
+  margin-left: 0;
+}
+
+.plugin-action-button {
+  position: relative;
+  width: auto;
+  padding: 8px 8px;
+  font-size: 13px;
+  background-color: gray;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.plugin-action-button:hover {
+  background-color: #0051d5;
+}
+
+.plugin-action-button:active {
+  background-color: #004bb5;
+}
+
+.plugin-dialog-bottom-buttons #close {
+  position: relative;
+  margin-left: 8px;
+}

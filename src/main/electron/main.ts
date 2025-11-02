@@ -61,6 +61,7 @@ import {
   FRC_LOG_FOLDER,
   HUB_DEFAULT_HEIGHT,
   HUB_DEFAULT_WIDTH,
+  PLUGIN_DIRECTORIES_FILENAME,
   PREFS_FILENAME,
   RECENT_UNITS_FILENAME,
   RLOG_CONNECT_TIMEOUT_MS,
@@ -141,6 +142,7 @@ let hubWindows: BrowserWindow[] = []; // Ordered by last focus time (recent firs
 let downloadWindow: BrowserWindow | null = null;
 let prefsWindow: BrowserWindow | null = null;
 let licensesWindow: BrowserWindow | null = null;
+let pluginDialogWindow: BrowserWindow | null = null;
 let satelliteWindows: { [id: string]: BrowserWindow[] } = {};
 let windowPorts: { [id: number]: MessagePortMain } = {};
 let hubTouchBarSliders: { [id: number]: TouchBarSlider } = {};
@@ -152,6 +154,7 @@ let stateTracker = new StateTracker();
 let updateChecker = new UpdateChecker();
 let usingUsb = false; // Menu bar setting, bundled with other prefs for renderers
 let firstOpenPath: string | null = null; // Cache path to open immediately
+let pluginDirectories: string[] = []; // Plugin directories loaded from file
 let advantageScopeAssets: AdvantageScopeAssets = {
   field2ds: [],
   field3ds: [],
@@ -160,8 +163,6 @@ let advantageScopeAssets: AdvantageScopeAssets = {
   loadFailures: []
 };
 XRServer.assetsSupplier = () => advantageScopeAssets;
-
-console.log("getAllTabTypesWithPlugins: ", JSON.stringify(getAllTabTypesWithPlugins(), null, 2));
 
 // Live RLOG variables
 let rlogSockets: { [id: number]: net.Socket } = {};
@@ -1816,6 +1817,14 @@ function setupMenu() {
             openLicenses(window);
           }
         },
+        {
+          label: "Manage Plugins...",
+          click(_, baseWindow) {
+            const window = baseWindow as BrowserWindow | undefined;
+            if (window === undefined) return;
+            openPluginDialog(window);
+          }
+        },
         { type: "separator" },
         {
           label: "Show Assets Folder",
@@ -2586,6 +2595,9 @@ function createHubWindow(state?: WindowState) {
     if (fs.existsSync(TYPE_MEMORY_FILENAME)) {
       sendMessage(window, "restore-type-memory", jsonfile.readFileSync(TYPE_MEMORY_FILENAME));
     }
+    // Send plugin directories to renderer for loading
+    sendMessage(window, "load-plugins", pluginDirectories);
+    // Restore state after plugins are loaded (handled by renderer)
     if (firstLoad && state !== undefined) {
       sendMessage(window, "restore-state", state.state);
     } else {
@@ -3229,6 +3241,163 @@ function openLicenses(parentWindow: Electron.BrowserWindow) {
 }
 
 /**
+ * Creates a new plugin dialog window if it doesn't already exist.
+ * @param parentWindow The parent window to use for alignment
+ */
+function openPluginDialog(parentWindow: Electron.BrowserWindow) {
+  if (pluginDialogWindow !== null && !pluginDialogWindow.isDestroyed()) {
+    pluginDialogWindow.focus();
+    return;
+  }
+
+  const width = 500;
+  const height = 400;
+  pluginDialogWindow = new BrowserWindow({
+    width: width,
+    height: height,
+    minWidth: 400,
+    minHeight: 300,
+    x: Math.floor(parentWindow.getBounds().x + parentWindow.getBounds().width / 2 - width / 2),
+    y: Math.floor(parentWindow.getBounds().y + parentWindow.getBounds().height / 2 - height / 2),
+    resizable: true,
+    icon: WINDOW_ICON,
+    show: false,
+    fullscreenable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js")
+    }
+  });
+
+  // Finish setup
+  pluginDialogWindow.setMenu(null);
+  pluginDialogWindow.once("ready-to-show", () => {
+    pluginDialogWindow?.show();
+    if (!app.isPackaged) {
+      // Open DevTools for debugging
+      pluginDialogWindow?.webContents.openDevTools({ mode: "detach" });
+    }
+  });
+  pluginDialogWindow.webContents.on("dom-ready", () => {
+    // Create ports on reload
+    if (pluginDialogWindow === null) return;
+    const { port1, port2 } = new MessageChannelMain();
+    pluginDialogWindow.webContents.postMessage("port", null, [port1]);
+
+    // Load plugin directories from file
+    let pluginDirectories: string[] = [];
+    if (fs.existsSync(PLUGIN_DIRECTORIES_FILENAME)) {
+      try {
+        pluginDirectories = jsonfile.readFileSync(PLUGIN_DIRECTORIES_FILENAME);
+      } catch (error) {
+        console.error("Failed to load plugin directories:", error);
+      }
+    }
+
+    // Load plugin metadata
+    const plugins = pluginDirectories.map((directory) => {
+      let name: string | null = null;
+      try {
+        const pluginIndexPath = path.join(directory, "index.js");
+        if (fs.existsSync(pluginIndexPath)) {
+          const pluginCode = fs.readFileSync(pluginIndexPath, "utf-8");
+          const titleMatch = pluginCode.match(/title:\s*["']([^"']+)["']/);
+          if (titleMatch) {
+            name = titleMatch[1];
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to load plugin metadata from ${directory}:`, error);
+      }
+      return { directory, name };
+    });
+
+    // Send initial plugin list
+    port2.postMessage({ plugins });
+
+    // Handle messages from renderer
+    port2.on("message", async (event) => {
+      const message = event.data;
+
+      if (message.action === "get-plugins") {
+        // Resend plugin list
+        port2.postMessage({ plugins });
+      } else if (message.action === "add-plugin") {
+        // Show folder dialog
+        const result = await dialog.showOpenDialog(pluginDialogWindow!, {
+          properties: ["openDirectory"],
+          title: "Select Plugin Directory"
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+          const newDirectory = result.filePaths[0];
+          if (!pluginDirectories.includes(newDirectory)) {
+            pluginDirectories.push(newDirectory);
+            jsonfile.writeFileSync(PLUGIN_DIRECTORIES_FILENAME, pluginDirectories);
+
+            // Reload plugin metadata
+            let name: string | null = null;
+            try {
+              const pluginIndexPath = path.join(newDirectory, "index.js");
+              if (fs.existsSync(pluginIndexPath)) {
+                const pluginCode = fs.readFileSync(pluginIndexPath, "utf-8");
+                const titleMatch = pluginCode.match(/title:\s*["']([^"']+)["']/);
+                if (titleMatch) {
+                  name = titleMatch[1];
+                }
+              }
+            } catch (error) {
+              console.error(`Failed to load plugin metadata from ${newDirectory}:`, error);
+            }
+
+            plugins.push({ directory: newDirectory, name });
+            port2.postMessage({ plugins });
+          }
+        }
+      } else if (message.action === "remove-plugin") {
+        const index = message.index;
+        if (index >= 0 && index < pluginDirectories.length) {
+          pluginDirectories.splice(index, 1);
+          plugins.splice(index, 1);
+          jsonfile.writeFileSync(PLUGIN_DIRECTORIES_FILENAME, pluginDirectories);
+          port2.postMessage({ plugins });
+        }
+      } else if (message.action === "reload") {
+        // Reload AdvantageScope
+        app.relaunch();
+        app.quit();
+      } else if (message.action === "close") {
+        if (message.hasChanges) {
+          // Prompt to restart
+          dialog
+            .showMessageBox(pluginDialogWindow!, {
+              type: "info",
+              title: "Restart Required",
+              message: "Plugin changes will take effect after restarting AdvantageScope.",
+              buttons: ["Restart Now", "Restart Later"],
+              defaultId: 0,
+              icon: WINDOW_ICON
+            })
+            .then((response) => {
+              if (response.response === 0) {
+                app.relaunch();
+                app.quit();
+              }
+              pluginDialogWindow?.destroy();
+            });
+        } else {
+          pluginDialogWindow?.destroy();
+        }
+      }
+    });
+
+    pluginDialogWindow?.on("blur", () => port2.postMessage({ isFocused: false }));
+    pluginDialogWindow?.on("focus", () => port2.postMessage({ isFocused: true }));
+    port2.start();
+  });
+  pluginDialogWindow.loadFile(path.join(__dirname, "../www/pluginDialog.html"));
+}
+
+/**
  * Creates a new source list help window.
  * @param parentWindow The parent window to use for alignment
  */
@@ -3388,13 +3557,24 @@ app.whenReady().then(() => {
   startOwletDownloadLoop();
 
   // Start plugin server and load plugin metadata
-  // For testing, use the built test plugin from example-plugins
-  const testPluginPath = "D:\\repos\\AdvantageScope\\example-plugins\\test-plugin\\dist";
-  PluginServer.setPluginDirectories([testPluginPath]);
+  // Load plugin directories from JSON file
+  if (fs.existsSync(PLUGIN_DIRECTORIES_FILENAME)) {
+    try {
+      pluginDirectories = jsonfile.readFileSync(PLUGIN_DIRECTORIES_FILENAME);
+      console.log("Loaded plugin directories from file:", pluginDirectories);
+    } catch (error) {
+      console.error("Failed to load plugin directories:", error);
+    }
+  } else {
+    // Create empty plugin directories file
+    jsonfile.writeFileSync(PLUGIN_DIRECTORIES_FILENAME, []);
+  }
+
+  PluginServer.setPluginDirectories(pluginDirectories);
   PluginServer.start();
 
   // Load plugin metadata for menu creation (synchronous, main process)
-  loadPluginMetadata([testPluginPath]);
+  loadPluginMetadata(pluginDirectories);
 
   // Create menu and windows
   setupMenu();
@@ -3447,6 +3627,10 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", () => {
+  PluginServer.stop();
 });
 
 // macOS only, Linux & Windows start a new process and pass the file as an argument
