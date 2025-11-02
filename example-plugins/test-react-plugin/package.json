@@ -1,0 +1,37 @@
+{
+  "name": "@advantagescope/test-react-plugin",
+  "version": "1.0.0",
+  "description": "Example React plugin for AdvantageScope",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "advantagescope",
+    "plugin",
+    "react"
+  ],
+  "author": "Littleton Robotics",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.4",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.2",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "rimraf": "^5.0.5",
+    "rollup": "^4.9.6",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@advantagescope/plugin-api": "file:../../plugin-api",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
+
