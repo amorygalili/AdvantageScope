@@ -88,8 +88,6 @@ function renderPluginList() {
 
     PLUGIN_LIST.appendChild(item);
   });
-
-  console.log("PLUGIN_LIST:", PLUGIN_LIST, PLUGIN_LIST.outerHTML);
 }
 
 function removePlugin(index: number) {

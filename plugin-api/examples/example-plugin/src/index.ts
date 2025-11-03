@@ -6,16 +6,14 @@
 // at the root directory of this project.
 
 import { Plugin } from "@advantagescope/plugin-api";
-import TestController from "./TestController";
-import TestRenderer from "./TestRenderer";
+import ExampleController from "./ExampleController";
+import ExampleRenderer from "./ExampleRenderer";
 
-// Plugin definition
-const testReactPlugin: Plugin = {
-  title: "Test React Plugin",
-  icon: "⚛️",
-  controller: TestController,
-  renderer: TestRenderer
+const examplePlugin: Plugin = {
+  title: "Example Plugin",
+  icon: "🧪",
+  controller: ExampleController,
+  renderer: ExampleRenderer
 };
 
-export default testReactPlugin;
-
+export default examplePlugin;

@@ -20,8 +20,6 @@ const PLUGIN_SERVER_PORT = 56329;
  * This function should be called during application initialization
  */
 export async function loadPlugins(pluginDirectories: string[]): Promise<void> {
-  console.log("Loading plugins from directories:", pluginDirectories);
-
   for (let i = 0; i < Math.min(pluginDirectories.length, 5); i++) {
     try {
       // Construct the URL to the plugin's index.ts file
@@ -46,24 +44,6 @@ export async function loadPlugins(pluginDirectories: string[]): Promise<void> {
 
   // Update the loaded plugins in TabType module
   setLoadedPlugins(plugins);
-  console.log(
-    "Plugins loaded:",
-    plugins.map((p) => (p ? p.title : "null"))
-  );
-}
-
-/**
- * Initialize plugins with hardcoded test plugin for development
- * This is a temporary function for testing purposes
- */
-export async function addTestPlugins(): Promise<void> {
-  // For now, hardcode the test plugin directory
-  // In the future, this will be provided by user preferences
-  const testPluginDir = "D:\\repos\\AdvantageScope\\example-plugins\\test-plugin\\dist";
-  console.log("Test plugin directory:", testPluginDir);
-
-  // Use the loadPlugins function to load from the plugin server
-  await loadPlugins([testPluginDir]);
 }
 
 /**

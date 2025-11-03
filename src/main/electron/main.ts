@@ -131,10 +131,6 @@ function loadPluginMetadata(pluginDirectories: string[]): void {
 
   // Set the loaded plugins metadata for menu creation
   setLoadedPlugins(pluginMetadata);
-  console.log(
-    "Plugin metadata loaded:",
-    pluginMetadata.map((p) => (p ? p.title : "null"))
-  );
 }
 
 // Global variables

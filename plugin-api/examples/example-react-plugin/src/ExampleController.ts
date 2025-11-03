@@ -17,9 +17,8 @@ import {
   TabController
 } from "@advantagescope/plugin-api";
 
-// Simple configuration for the test plugin source list
-const TestPluginConfig: SourceListConfig = {
-  title: "Test Sources",
+const ExamplePluginConfig: SourceListConfig = {
+  title: "Example Sources",
   autoAdvance: false,
   allowChildrenFromDrag: false,
   types: [
@@ -56,7 +55,7 @@ const TestPluginConfig: SourceListConfig = {
   ]
 };
 
-export default class TestController implements TabController {
+export default class ExampleController implements TabController {
   UUID = createUUID();
   private ROOT: HTMLElement;
   private sourceList: SourceList;
@@ -64,7 +63,6 @@ export default class TestController implements TabController {
   constructor(root: HTMLElement) {
     this.ROOT = root;
 
-    // Create a container for the source list
     const sourceListContainer = document.createElement("div");
     sourceListContainer.style.width = "100%";
     sourceListContainer.style.height = "100%";
@@ -73,10 +71,8 @@ export default class TestController implements TabController {
 
     this.ROOT.appendChild(sourceListContainer);
 
-    // Create the source list
-    this.sourceList = createSourceList(sourceListContainer, TestPluginConfig, []);
+    this.sourceList = createSourceList(sourceListContainer, ExamplePluginConfig, []);
 
-    // Apply custom styles to source list elements
     const clearButton = sourceListContainer.querySelector(".clear") as HTMLElement;
     if (clearButton) {
       clearButton.style.right = "25px";
@@ -107,9 +103,7 @@ export default class TestController implements TabController {
     this.sourceList.refresh();
   }
 
-  newAssets(): void {
-    // Called when assets are updated
-  }
+  newAssets(): void {}
 
   getActiveFields(): string[] {
     return this.sourceList.getActiveFields();
@@ -119,17 +113,16 @@ export default class TestController implements TabController {
     return true;
   }
 
-  getCommand(): TestCommand {
+  getCommand(): ExampleCommand {
     const time = getSelection().getRenderTime();
     if (time === null) {
       return { sources: [], time: null };
     }
 
-    const state = this.sourceList.getState(true); // Only get displayed fields
+    const state = this.sourceList.getState(true);
     const sources: SourceData[] = state.map((item) => {
       let value: any = null;
 
-      // Get the value based on the type
       switch (item.type) {
         case "number":
           value = getOrDefault(item.logKey, LoggableType.Number, time, null, this.UUID);
@@ -162,7 +155,7 @@ export type SourceData = {
   value: any;
 };
 
-export type TestCommand = {
+export type ExampleCommand = {
   sources: SourceData[];
   time: number | null;
 };

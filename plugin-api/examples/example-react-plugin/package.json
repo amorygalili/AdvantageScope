@@ -1,5 +1,6 @@
 {
-  "name": "@advantagescope/test-react-plugin",
+  "name": "@advantagescope/example-react-plugin",
+  "private": true,
   "version": "1.0.0",
   "description": "Example React plugin for AdvantageScope",
   "main": "dist/index.js",
@@ -29,9 +30,8 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@advantagescope/plugin-api": "file:../../plugin-api",
+    "@advantagescope/plugin-api": "file:../../",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }
 }
-

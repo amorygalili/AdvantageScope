@@ -8,14 +8,13 @@
 import { TabRenderer } from "@advantagescope/plugin-api";
 import React from "react";
 import { createRoot, Root } from "react-dom/client";
-import { TestCommand, SourceData } from "./TestController";
+import { ExampleCommand, SourceData } from "./ExampleController";
 
-// React component for displaying the test data
-interface TestDisplayProps {
-  command: TestCommand;
+interface ExampleDisplayProps {
+  command: ExampleCommand;
 }
 
-const TestDisplay: React.FC<TestDisplayProps> = ({ command }) => {
+const ExampleDisplay: React.FC<ExampleDisplayProps> = ({ command }) => {
   if (!command || command.sources.length === 0) {
     return (
       <div style={{ textAlign: "center", color: "#888", fontSize: "18px", marginTop: "50px" }}>
@@ -41,15 +40,12 @@ const TestDisplay: React.FC<TestDisplayProps> = ({ command }) => {
         </tbody>
       </table>
       {command.time !== null && (
-        <div style={{ marginTop: "20px", color: "#888", fontSize: "14px" }}>
-          Time: {command.time.toFixed(3)}s
-        </div>
+        <div style={{ marginTop: "20px", color: "#888", fontSize: "14px" }}>Time: {command.time.toFixed(3)}s</div>
       )}
     </>
   );
 };
 
-// React component for a single source row
 interface SourceRowProps {
   source: SourceData;
 }
@@ -80,42 +76,37 @@ const SourceRow: React.FC<SourceRowProps> = ({ source }) => {
   );
 };
 
-export default class TestRenderer implements TabRenderer {
+export default class ExampleRenderer implements TabRenderer {
   private root: Root;
-  private currentCommand: TestCommand = { sources: [], time: null };
+  private currentCommand: ExampleCommand = { sources: [], time: null };
 
   constructor(rootElement: HTMLElement) {
-    // Create container for React app
     const container = document.createElement("div");
     container.style.padding = "20px";
     container.style.height = "100%";
     container.style.overflowY = "auto";
     rootElement.appendChild(container);
 
-    // Create React root
     this.root = createRoot(container);
     this.renderComponent();
   }
 
   private renderComponent(): void {
-    this.root.render(<TestDisplay command={this.currentCommand} />);
+    this.root.render(<ExampleDisplay command={this.currentCommand} />);
   }
 
   saveState(): unknown {
     return null;
   }
 
-  restoreState(state: unknown): void {
-    // No state to restore
-  }
+  restoreState(state: unknown): void {}
 
   getAspectRatio(): number | null {
-    return null; // No fixed aspect ratio
+    return null;
   }
 
   render(command: unknown): void {
-    this.currentCommand = command as TestCommand;
+    this.currentCommand = command as ExampleCommand;
     this.renderComponent();
   }
 }
-

@@ -20,7 +20,6 @@ export namespace PluginServer {
    */
   export function setPluginDirectories(directories: string[]) {
     pluginDirectories = directories;
-    console.log("Plugin directories set:", pluginDirectories);
   }
 
   /**

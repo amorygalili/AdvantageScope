@@ -6,39 +6,36 @@
 // at the root directory of this project.
 
 import { TabRenderer } from "@advantagescope/plugin-api";
-import { TestCommand } from "./TestController";
+import { ExampleCommand } from "./ExampleController";
 
-export default class TestRenderer implements TabRenderer {
+export default class ExampleRenderer implements TabRenderer {
   private CONTAINER: HTMLElement;
   private DISPLAY: HTMLElement;
 
   constructor(root: HTMLElement) {
     this.CONTAINER = root;
 
-    // Create display element with a table for showing all sources
     this.CONTAINER.innerHTML = `
       <div style="padding: 20px; height: 100%; overflow-y: auto;">
-        <div class="test-display"></div>
+        <div class="example-display"></div>
       </div>
     `;
 
-    this.DISPLAY = this.CONTAINER.querySelector(".test-display")!;
+    this.DISPLAY = this.CONTAINER.querySelector(".example-display")!;
   }
 
   saveState(): unknown {
     return null;
   }
 
-  restoreState(state: unknown): void {
-    // No state to restore
-  }
+  restoreState(state: unknown): void {}
 
   getAspectRatio(): number | null {
-    return null; // No fixed aspect ratio
+    return null;
   }
 
   render(command: unknown): void {
-    const cmd = command as TestCommand;
+    const cmd = command as ExampleCommand;
 
     if (!cmd || cmd.sources.length === 0) {
       this.DISPLAY.innerHTML = `
@@ -49,7 +46,6 @@ export default class TestRenderer implements TabRenderer {
       return;
     }
 
-    // Create a table to display all sources and their values
     let tableHTML = `
       <table style="width: 100%; border-collapse: collapse; font-family: monospace;">
         <thead>

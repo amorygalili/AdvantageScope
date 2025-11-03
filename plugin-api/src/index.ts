@@ -13,10 +13,8 @@
  * these functions instead of directly accessing window properties.
  */
 
-// Re-export types
 export * from "./types";
 
-// Import types
 import type {
   AdvantageScopeAssets,
   ButtonRect,
