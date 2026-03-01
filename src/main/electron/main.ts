@@ -1,10 +1,11 @@
-// Copyright (c) 2021-2025 Littleton Robotics
+// Copyright (c) 2021-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
 //
 // Use of this source code is governed by a BSD
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
+import { parseREVLOG } from "@rev-robotics/revlog-converter";
 import { FileInfo, Client as FTPClient, FTPError } from "basic-ftp";
 import { hex } from "color-convert";
 import {
@@ -32,6 +33,7 @@ import net from "net";
 import os from "os";
 import path from "path";
 import { PNG } from "pngjs";
+import { Readable } from "stream";
 import { AdvantageScopeAssets } from "../../shared/AdvantageScopeAssets";
 import ButtonRect from "../../shared/ButtonRect";
 import { ensureThemeContrast } from "../../shared/Colors";
@@ -132,6 +134,11 @@ function loadPluginMetadata(pluginDirectories: string[]): void {
   // Set the loaded plugins metadata for menu creation
   setLoadedPlugins(pluginMetadata);
 }
+// Dynamically load lzma-native to handle platforms without prebuilt binaries
+let lzma: typeof import("lzma-native") | null = null;
+try {
+  lzma = require("lzma-native");
+} catch (e) {}
 
 // Global variables
 let hubWindows: BrowserWindow[] = []; // Ordered by last focus time (recent first)
@@ -466,6 +473,62 @@ async function handleHubMessage(window: BrowserWindow, message: NamedMessage) {
                     sendIfReady();
                   });
               });
+          }
+        } else if (path.endsWith(".revlog")) {
+          // REVLOG, convert to WPILOG
+          targetCount += 1;
+
+          parseREVLOG(path)
+            .then((wpilogBuffer) => {
+              results[0] = wpilogBuffer;
+              completedCount++;
+              sendIfReady();
+            })
+            .catch((err) => {
+              errorMessage = err.message;
+              completedCount++;
+              sendIfReady();
+            });
+        } else if (path.endsWith(".wpilogxz")) {
+          // Externally compressed WPILOG, decompress
+          targetCount += 1;
+          if (lzma === null) {
+            errorMessage = "Compressed WPILOG files (.wpilogxz) are not supported on this platform.";
+            completedCount++;
+            sendIfReady();
+          } else {
+            fs.open(path, "r", (error, file) => {
+              if (error) {
+                completedCount++;
+                sendIfReady();
+                return;
+              }
+              fs.readFile(file, (error, compressedBuffer) => {
+                if (error) {
+                  completedCount++;
+                  sendIfReady();
+                }
+                const inputStream = Readable.from(compressedBuffer);
+                const decompressor = lzma.createDecompressor();
+                const chunks: any[] = [];
+                let totalLength = 0;
+                inputStream.pipe(decompressor);
+                decompressor.on("data", (chunk) => {
+                  chunks.push(chunk);
+                  totalLength += chunk.length;
+                });
+                decompressor.on("error", () => {
+                  results[0] = Buffer.concat(chunks, totalLength);
+                  completedCount++;
+                  sendIfReady();
+                });
+                decompressor.on("end", () => {
+                  results[0] = Buffer.concat(chunks, totalLength);
+                  completedCount++;
+                  sendIfReady();
+                });
+              });
+            });
           }
         } else {
           // Normal log, open normally
@@ -1588,25 +1651,34 @@ async function downloadStart() {
         if (list.length === 0) {
           downloadError("No files");
         } else {
-          sendMessage(
-            downloadWindow,
-            "set-list",
-            list
-              .map((file) => {
-                return { name: file.name, size: file.size };
-              })
-              .filter(
-                (file) =>
-                  !file.name.startsWith(".") &&
-                  (file.name.endsWith(".rlog") || file.name.endsWith(".wpilog") || file.name.endsWith(".hoot"))
-              )
-              .map((file) => {
-                return {
-                  name: file.name,
-                  size: file.size
-                };
-              })
+          const filesAndFolders = list.filter(
+            (file) =>
+              !file.name.startsWith(".") &&
+              (file.isDirectory ||
+                file.name.endsWith(".rlog") ||
+                file.name.endsWith(".wpilog") ||
+                file.name.endsWith(".wpilogxz") ||
+                file.name.endsWith(".hoot") ||
+                file.name.endsWith(".revlog"))
           );
+          const listData: { name: string; size: number; isFolder: boolean }[] = [];
+          for (const file of filesAndFolders) {
+            if (file.isDirectory) {
+              let totalSize = 0;
+              try {
+                const subFiles = await downloadClient?.list(downloadPath + file.name);
+                if (subFiles) {
+                  subFiles.forEach((subFile) => {
+                    if (subFile.isFile) totalSize += subFile.size;
+                  });
+                }
+              } catch (e) {}
+              listData.push({ name: file.name, size: totalSize, isFolder: true });
+            } else {
+              listData.push({ name: file.name, size: file.size, isFolder: false });
+            }
+          }
+          sendMessage(downloadWindow, "set-list", listData);
         }
       }
 
@@ -1643,7 +1715,8 @@ function downloadSave(files: string[]) {
   if (!downloadWindow) return;
   downloadClientIsSaving = true;
   let selectPromise;
-  if (files.length > 1) {
+  let firstExtension = path.extname(files[0]);
+  if (files.length > 1 || firstExtension === "") {
     selectPromise = dialog.showOpenDialog(downloadWindow, {
       title: "Select save location for robot logs",
       buttonLabel: "Save",
@@ -1651,17 +1724,23 @@ function downloadSave(files: string[]) {
       defaultPath: getDefaultLogPath()
     });
   } else {
-    let extension = path.extname(files[0]).slice(1);
+    let extension = firstExtension.slice(1);
     let name = "";
     switch (extension) {
       case "wpilog":
         name = "WPILib robot log";
+        break;
+      case "wpilogxz":
+        name = "Compressed WPILib robot log";
         break;
       case "rlog":
         name = "Robot log";
         break;
       case "hoot":
         name = "Hoot robot log";
+        break;
+      case "revlog":
+        name = "REV Robotics CAN log";
         break;
     }
     selectPromise = dialog.showSaveDialog(downloadWindow, {
@@ -1676,7 +1755,7 @@ function downloadSave(files: string[]) {
   selectPromise.then(async (response) => {
     if (response.canceled) return;
     let savePath: string = "";
-    if (files.length > 1) {
+    if (files.length > 1 || firstExtension === "") {
       savePath = (response as Electron.OpenDialogReturnValue).filePaths[0];
     } else {
       savePath = (response as Electron.SaveDialogReturnValue).filePath as string;
@@ -1691,7 +1770,7 @@ function downloadSave(files: string[]) {
       });
 
       // Start saving
-      if (files.length === 1) {
+      if (files.length === 1 && firstExtension !== "") {
         // Single file
         if (files[0] in downloadFileSizeCache) {
           sizeTotal = downloadFileSizeCache[files[0]];
@@ -1724,37 +1803,74 @@ function downloadSave(files: string[]) {
         }
       } else {
         // Multiple files
-        let remoteFiles: string[] = [];
-        files.forEach((file) => {
-          let localPath = savePath + "/" + file;
-          let remoteSize = 0;
-          if (file in downloadFileSizeCache) remoteSize = downloadFileSizeCache[file];
-          if (!fs.existsSync(savePath + "/" + file) || fs.statSync(localPath).size < remoteSize) {
-            remoteFiles.push(file);
-            sizeTotal += remoteSize;
+        let downloadTasks: { remote: string; local: string; size: number }[] = [];
+        for (const file of files) {
+          if (path.extname(file) === "") {
+            // Folder
+            try {
+              const subFiles = await downloadClient?.list(downloadPath + file);
+              if (subFiles) {
+                const localFolderPath = path.join(savePath, file);
+                if (!fs.existsSync(localFolderPath)) {
+                  fs.mkdirSync(localFolderPath);
+                }
+                for (const subFile of subFiles) {
+                  if (subFile.isFile) {
+                    downloadTasks.push({
+                      remote: downloadPath + file + "/" + subFile.name,
+                      local: path.join(localFolderPath, subFile.name),
+                      size: subFile.size
+                    });
+                  }
+                }
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          } else {
+            // File
+            let remoteSize = 0;
+            if (file in downloadFileSizeCache) remoteSize = downloadFileSizeCache[file];
+            downloadTasks.push({
+              remote: downloadPath + file,
+              local: path.join(savePath, file),
+              size: remoteSize
+            });
           }
+        }
+
+        // Filter existing
+        let totalCount = downloadTasks.length;
+        downloadTasks = downloadTasks.filter((task) => {
+          if (!fs.existsSync(task.local) || fs.statSync(task.local).size < task.size) {
+            sizeTotal += task.size;
+            return true;
+          }
+          return false;
         });
 
-        if (remoteFiles.length === 0) {
+        if (downloadTasks.length === 0) {
           // All files skipped
           if (downloadWindow) sendMessage(downloadWindow, "show-alert", "No new logs found.");
           return;
         }
         try {
-          for (let i in remoteFiles) {
-            await downloadClient?.downloadTo(savePath + "/" + remoteFiles[i], downloadPath + remoteFiles[i]);
+          for (const task of downloadTasks) {
+            await downloadClient?.downloadTo(task.local, task.remote);
           }
           if (!downloadWindow) return;
           sendMessage(downloadWindow, "set-progress", 1);
 
           // Send message
           let message: string;
-          if (remoteFiles.length < files.length) {
-            message = `Saved ${remoteFiles.length} new log${remoteFiles.length === 1 ? "" : "s"} (${
-              files.length - remoteFiles.length
+          if (totalCount > downloadTasks.length) {
+            message = `Saved ${downloadTasks.length} new file${downloadTasks.length === 1 ? "" : "s"} (${
+              totalCount - downloadTasks.length
             } skipped) to <u>${savePath}</u>`;
           } else {
-            message = `Saved ${remoteFiles.length} new log${remoteFiles.length === 1 ? "" : "s"} to <u>${savePath}</u>`;
+            message = `Saved ${downloadTasks.length} new file${
+              downloadTasks.length === 1 ? "" : "s"
+            } to <u>${savePath}</u>`;
           }
           if (!downloadWindow) return;
           sendMessage(downloadWindow, "set-progress", 1);
@@ -1907,7 +2023,10 @@ function setupMenu() {
                 message: "If multiple files are selected, timestamps will be aligned automatically",
                 properties: ["openFile", "multiSelections"],
                 filters: [
-                  { name: "Robot logs", extensions: ["rlog", "wpilog", "dslog", "dsevents", "hoot", "log", "csv"] }
+                  {
+                    name: "Robot logs",
+                    extensions: ["rlog", "wpilog", "wpilogxz", "dslog", "dsevents", "hoot", "revlog", "log", "csv"]
+                  }
                 ],
                 defaultPath: getDefaultLogPath()
               })
@@ -1929,7 +2048,10 @@ function setupMenu() {
                 title: "Select the robot log file(s) to add to the current log",
                 properties: ["openFile", "multiSelections"],
                 filters: [
-                  { name: "Robot logs", extensions: ["rlog", "wpilog", "dslog", "dsevents", "hoot", "log", "csv"] }
+                  {
+                    name: "Robot logs",
+                    extensions: ["rlog", "wpilog", "wpilogxz", "dslog", "dsevents", "hoot", "revlog", "log", "csv"]
+                  }
                 ],
                 defaultPath: getDefaultLogPath()
               })
@@ -2185,7 +2307,13 @@ function setupMenu() {
             createHubWindow();
           }
         },
-        { role: "close", accelerator: "Shift+CmdOrCtrl+W" }
+        {
+          label: "Close Window",
+          accelerator: "Shift+CmdOrCtrl+W",
+          click(_, window) {
+            window?.close();
+          }
+        }
       ]
     },
     { role: "editMenu" },
@@ -3592,10 +3720,12 @@ app.whenReady().then(() => {
   let fileArgs = process.argv.filter(
     (x) =>
       x.endsWith(".wpilog") ||
+      x.endsWith(".wpilogxz") ||
       x.endsWith(".rlog") ||
       x.endsWith(".dslog") ||
       x.endsWith(".dsevents") ||
       x.endsWith(".hoot") ||
+      x.endsWith(".revlog") ||
       x.endsWith(".log") ||
       x.endsWith(".csv")
   );

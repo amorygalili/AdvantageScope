@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Littleton Robotics
+// Copyright (c) 2021-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
 //
 // Use of this source code is governed by a BSD
@@ -493,6 +493,12 @@ export namespace Units {
         pluralizeSuffix: false,
         names: ["us", "usec", "usecs", "micro", "micros", "microsecond", "microseconds"]
       },
+      nanoseconds: {
+        value: 1000000000,
+        suffix: "ns",
+        pluralizeSuffix: false,
+        names: ["ns", "nsec", "nsecs", "nano", "nanos", "nanosecond", "nanoseconds"]
+      },
       minutes: {
         value: 1 / 60,
         suffix: "min",
@@ -855,23 +861,21 @@ export namespace Units {
   export const UNIT_SUFFIXES: { [key: string]: string } = (() => {
     let suffixes: { [key: string]: string } = {};
     Object.entries(ALL_UNITS).forEach(([key, config]) => {
-      [...config.names, ...config.names.filter((name) => name.endsWith("s")).map((name) => name.slice(0, -1))].forEach(
-        (name) => {
-          if (name.length === 0) return;
-          suffixes[name] = key;
-          suffixes[" " + name] = key;
-          suffixes["_" + name] = key;
-          if (name.includes(" ")) {
-            suffixes[name.replaceAll(" ", "")] = key;
-            suffixes[name.replaceAll(" ", "_")] = key;
-          }
-          if (name.includes(" per ")) {
-            suffixes[name.replaceAll(" per ", "/")] = key;
-            suffixes[name.replaceAll(" per ", "/").replaceAll(" ", "")] = key;
-            suffixes[name.replaceAll(" per ", "/").replaceAll(" ", "_")] = key;
-          }
+      config.names.forEach((name) => {
+        if (name.length === 0) return;
+        suffixes[name] = key;
+        suffixes[" " + name] = key;
+        suffixes["_" + name] = key;
+        if (name.includes(" ")) {
+          suffixes[name.replaceAll(" ", "")] = key;
+          suffixes[name.replaceAll(" ", "_")] = key;
         }
-      );
+        if (name.includes(" per ")) {
+          suffixes[name.replaceAll(" per ", "/")] = key;
+          suffixes[name.replaceAll(" per ", "/").replaceAll(" ", "")] = key;
+          suffixes[name.replaceAll(" per ", "/").replaceAll(" ", "_")] = key;
+        }
+      });
     });
     return suffixes;
   })();
@@ -881,7 +885,9 @@ export namespace Units {
     let matchedSuffixes = Object.keys(UNIT_SUFFIXES).filter(
       (suffix) =>
         !suffix.includes("/") &&
+        fieldKey.length > suffix.length &&
         fieldKeyLowercase.endsWith(suffix.toLowerCase()) &&
+        !fieldKeyLowercase.endsWith("/" + suffix.toLowerCase()) &&
         (suffix.startsWith("_") || suffix.startsWith(" ") || charIsCapital(fieldKey, fieldKey.length - suffix.length))
     );
     if (matchedSuffixes.length === 0) return null;

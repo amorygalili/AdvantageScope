@@ -1,7 +1,7 @@
 {
   "name": "advantagescope",
   "productName": "AdvantageScope",
-  "version": "26.0.0-beta-1",
+  "version": "26.0.1",
   "description": "Robot telemetry application",
   "author": {
     "name": "Littleton Robotics",
@@ -14,6 +14,7 @@
     "start": "electron bundles/main.js",
     "compile": "rollup -c --configMain && rollup -c --configLargeRenderers && rollup -c --configSmallRenderers && rollup -c --configWorkers && rollup -c --configXR",
     "build": "npm run compile && npm run wasm:compile && npm run docs:build-embed && electron-builder build",
+    "build-linux": "npm run compile && npm run wasm:compile && npm run docs:build-embed && electron-builder build -c.electronVersion=37.10.3",
     "fast-build": "npm run compile && npm run wasm:compile && npm run docs:build-embed && electron-builder build --dir",
     "watch": "node --max-old-space-size=16384 node_modules/rollup/dist/bin/rollup -c -w",
     "download-owlet": "rollup -c --configRunOwletDownload && node runOwletDownload.js",
@@ -45,6 +46,7 @@
     "@types/download": "^8.0.2",
     "@types/heatmap.js": "2.0.38",
     "@types/jsonfile": "^6.1.2",
+    "@types/lzma-native": "^4.0.4",
     "@types/pngjs": "^6.0.5",
     "@types/three": "^0.168.0",
     "bignumber.js": "^9.1.2",
@@ -53,7 +55,7 @@
     "chart.js": "^4.4.0",
     "color-convert": "^2.0.1",
     "compare-versions": "^6.1.1",
-    "electron": "^37.2.6",
+    "electron": "^39.2.7",
     "electron-builder": "^26.0.0",
     "fuse.js": "^7.0.0",
     "gunzip-file": "^0.1.1",
@@ -76,7 +78,7 @@
     "typescript": "5.6.3"
   },
   "dependencies": {
-    "@distube/ytdl-core": "^4.16.12",
+    "@rev-robotics/revlog-converter": "^1.0.3",
     "@types/emscripten": "^1.39.13",
     "@types/ws": "^8.5.13",
     "basic-ftp": "^5.0.5",
@@ -84,9 +86,11 @@
     "download": "^8.0.0",
     "electron-fetch": "^1.9.1",
     "jsonfile": "^6.1.0",
+    "lzma-native": "^8.0.6",
     "pngjs": "^7.0.0",
     "tesseract.js": "^6.0.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "youtube-dl-exec": "github:jwbonner/youtube-dl-exec#708fe6410c4c9fa22cf09ab424b15546b178bdbe"
   },
   "prettier": {
     "printWidth": 120,
@@ -97,12 +101,14 @@
   },
   "build": {
     "appId": "org.littletonrobotics.advantagescope",
-    "copyright": "Copyright © 2021-2025 Littleton Robotics",
+    "copyright": "Copyright © 2021-2026 Littleton Robotics",
     "npmRebuild": false,
     "publish": [],
     "afterSign": "notarize.js",
     "electronFuses": {
-      "runAsNode": false
+      "runAsNode": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
     },
     "files": [
       "www/**/*",
@@ -116,6 +122,7 @@
           "owlet/${os}-${arch}/*"
         ]
       },
+      "@rev-robotics/revlog-converter/**/*",
       "!**/.*"
     ],
     "extraResources": [
@@ -131,6 +138,14 @@
         "mimeType": "application/x-wpilog",
         "role": "Viewer",
         "icon": "icons/app/wpilog-icon"
+      },
+      {
+        "ext": "wpilogxz",
+        "name": "Compressed WPILib robot log",
+        "description": "Compressed WPILib robot log",
+        "mimeType": "application/x-wpilogxz",
+        "role": "Viewer",
+        "icon": "icons/app/wpilogxz-icon"
       },
       {
         "ext": "rlog",
@@ -163,6 +178,14 @@
         "mimeType": "application/x-hoot",
         "role": "Viewer",
         "icon": "icons/app/hoot-icon"
+      },
+      {
+        "ext": "revlog",
+        "name": "REV Robotics CAN log",
+        "description": "REV Robotics CAN log",
+        "mimeType": "application/x-revlog",
+        "role": "Viewer",
+        "icon": "icons/app/revlog-icon"
       },
       {
         "ext": "csv",

@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2025 Littleton Robotics
+// Copyright (c) 2021-2026 Littleton Robotics
 // http://github.com/Mechanical-Advantage
 //
 // Use of this source code is governed by a BSD
@@ -145,7 +145,14 @@ export default class FTCDashboardSource extends LiveDataSource implements LiveDa
       let key = path + name;
 
       // Search for poses in the telemetry by parsing lines ending with x, y, heading, and heading (deg)
-      let label = name.split(" ").slice(0, -1).join(" ");
+      let label: string;
+      if (name.endsWith(" heading (deg)") || name === "heading (deg)") {
+        // Remove last 2 words of name
+        label = name.split(" ").slice(0, -2).join(" ") + " Pose";
+      } else {
+        // Remove last word of name
+        label = name.split(" ").slice(0, -1).join(" ") + " Pose";
+      }
 
       if (name.endsWith(" x") || name === "x") {
         if (!foundPoses.has(label)) {
@@ -259,7 +266,7 @@ export default class FTCDashboardSource extends LiveDataSource implements LiveDa
     return this.configState !== initialState;
   }
   isTunable(key: string): boolean {
-    return this.tunableKeysTypes.get(key) != undefined;
+    return this.tunableKeysTypes.get(key) !== undefined;
   }
   publish(key: string, value: number | boolean): void {
     if (!this.isTunable(key)) {
