@@ -26,7 +26,10 @@
     "docs:build-embed": "cd docs && npm run build-embed && cd ..",
     "docs:clear": "cd docs && npm run clear && cd ..",
     "docs:serve": "cd docs && npm run serve && cd ..",
-    "postinstall": "cd docs && npm install && cd .. && node getLicenses.mjs && node tesseractLangDownload.mjs && node bundleLiteAssets.mjs && npm run download-owlet"
+    "plugin-api:install": "cd plugin-api && npm install",
+    "plugin-api:build": "cd plugin-api && npm run build",
+    "plugin-api:install:examples": "cd plugin-api && npm run install:examples",
+    "postinstall": "cd docs && npm install && cd .. && npm run plugin-api:install && node getLicenses.mjs && node tesseractLangDownload.mjs && node bundleLiteAssets.mjs && npm run download-owlet"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.26.0",

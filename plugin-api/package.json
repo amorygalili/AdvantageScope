@@ -6,7 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "install:example-plugin": "cd examples/example-plugin && npm install && npm run build",
+    "install:example-react-plugin": "cd examples/example-react-plugin && npm install && npm run build",
+    "install:examples": "npm run install:example-plugin && npm run install:example-react-plugin",
+    "prepare": "npm run build"
   },
   "keywords": [
     "advantagescope",
@@ -21,6 +25,8 @@
   "license": "BSD-3-Clause",
   "devDependencies": {
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@advantagescope/example-react-plugin": "file:examples/example-react-plugin"
   }
 }
-

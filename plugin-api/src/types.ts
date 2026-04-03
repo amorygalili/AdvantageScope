@@ -132,7 +132,7 @@ export interface TabController {
   getCommand(): unknown;
 }
 
-export default interface TabRenderer {
+export interface TabRenderer {
   /** Returns the current state. */
   saveState(): unknown;
 
